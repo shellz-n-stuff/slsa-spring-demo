@@ -49,17 +49,22 @@ jobs:
 
     - name: Push Docker Image to GHCR
       run: |
-        docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.IMAGE_TAG }}
-        docker tag ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.IMAGE_TAG }} ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
-        docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
+        docker push {{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        docker tag {{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} {{ env.IMAGE_NAME }}:latest
+        docker push {{ env.IMAGE_NAME }}:latest
+    
+    - name: Get Image Digest
+      id: image-digest
+      run: |
+        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' {{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }})
+        echo "DIGEST=${DIGEST}" >> $GITHUB_ENV
 
     - name: Sign Docker Image with Cosign
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
-        cosign sign --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ghcr.io/${{ github.repository }}:latest
-        cosign sign --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ghcr.io/${{ github.repository }}:${{ env.COMMIT_SHA }}
-
+         cosign sign --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+      
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.23.0
       with:
