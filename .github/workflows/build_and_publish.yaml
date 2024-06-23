@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
 
     name: build-image
     env:
@@ -61,38 +62,21 @@ jobs:
         DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }})
         echo "DIGEST=${DIGEST}" >> $GITHUB_ENV
     
-    # SBOM generation and signing
+    # SBOM generation and scanning
     - name: Generate SBOM
-      run: syft ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -o json > sbom.json
+      run: syft ${{ env.IMAGE_NAME }}::${{ env.IMAGE_TAG }} -o json > sbom.json
 
-    - name: Attach SBOM to Docker Image and Submit a signature for the SBOM
-      env:
-        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: |
-        ATTACHED_SSBOM=$(cosign attach sbom --sbom sbom.json ${{ env.DIGEST }})
-        echo "${ATTACHED_SSBOM}"
-        cosign sign --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${ATTACHED_SSBOM}
+    - name: Scan SBOM with Grype
+      run: grype sbom:sbom.json --output sarif > grype-report.sarif
 
-
-    # Scan Image then Sign if Okay
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.23.0
-      with:
-        image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        exit-code: '0'
-        ignore-unfixed: true
-        vuln-type: 'os,library'
-        severity: 'CRITICAL,HIGH'
-
-    - name: Upload Trivy scan results to GitHub Security tab
+    - name: Upload Grype Report as SARIF
       uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: 'trivy-results.sarif'
-      
-    - name: Sign Docker Image with Cosign
+        sarif_file: grype-report.sarif
+
+    - name: Sign Docker Image + SBOM with Cosign
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
-         cosign sign --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+         cosign sign -a COMMIT=${{IMAGE_TAG}} -a GITHUB_REPO=${{ github.repository }} -a AUTHOR=${{github.actor}} -a REF=${{github.ref}} -a JOB_ID=${{github.job}} --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+         cosign attest --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") --predicate sbom.json  ${{ env.DIGEST }}
