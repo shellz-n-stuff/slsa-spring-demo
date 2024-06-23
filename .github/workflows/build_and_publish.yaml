@@ -55,11 +55,11 @@ jobs:
         cosign sign --key <(echo "${{ secrets.COSIGN_KEY }}") ghcr.io/${{ github.repository }}:${{ env.COMMIT_SHA }}
     
     - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.23.0
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+      uses: aquasecurity/trivy-action@0.23.0
+      with:
+        image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
