@@ -47,6 +47,12 @@ jobs:
     - name: Build with Gradle and Jib
       run: ./gradlew build jibDockerBuild --image=${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
+    - name: Push Docker Image to GHCR
+      run: |
+        docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.COMMIT_SHA }}
+        docker tag ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.COMMIT_SHA }} ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
+        docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
+
     - name: Sign Docker Image with Cosign
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
