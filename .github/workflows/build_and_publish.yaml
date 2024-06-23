@@ -33,7 +33,7 @@ jobs:
     - name: Set up Java 17
       uses: actions/setup-java@v3
       with:
-        distribution: 'zule'
+        distribution: 'zulu'
         java-version: '17'
         cache: 'gradle'
 
@@ -46,10 +46,20 @@ jobs:
 
     - name: Build with Gradle and Jib
       run: ./gradlew build jibDockerBuild --image=${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-    
+
     - name: Sign Docker Image with Cosign
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
         cosign sign --key <(echo "${{ secrets.COSIGN_KEY }}") ghcr.io/${{ github.repository }}:latest
         cosign sign --key <(echo "${{ secrets.COSIGN_KEY }}") ghcr.io/${{ github.repository }}:${{ env.COMMIT_SHA }}
+    
+    - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@7c2007bcb556501da015201bcba5aa14069b74e2
+        with:
+          image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
