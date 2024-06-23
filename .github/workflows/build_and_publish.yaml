@@ -49,8 +49,8 @@ jobs:
 
     - name: Push Docker Image to GHCR
       run: |
-        docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.COMMIT_SHA }}
-        docker tag ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.COMMIT_SHA }} ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
+        docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.IMAGE_TAG }}
+        docker tag ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.IMAGE_TAG }} ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
         docker push ghcr.io/shellz-n-stuff/slsa-spring-demo:latest
 
     - name: Sign Docker Image with Cosign
