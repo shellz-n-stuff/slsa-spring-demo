@@ -61,7 +61,7 @@ jobs:
       run: |
         DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }})
         echo "DIGEST=${DIGEST}" >> $GITHUB_ENV
-    
+
     # SBOM generation and scanning
     - name: Generate SBOM
       run: syft ${{ env.IMAGE_NAME }}::${{ env.IMAGE_TAG }} -o json > sbom.json
@@ -78,5 +78,5 @@ jobs:
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
-         cosign sign -a COMMIT=${{IMAGE_TAG}} -a GITHUB_REPO=${{ github.repository }} -a AUTHOR=${{github.actor}} -a REF=${{github.ref}} -a JOB_ID=${{github.job}} --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+         cosign sign -a COMMIT=${{env.IMAGE_TAG}} -a GITHUB_REPO=${{ github.repository }} -a AUTHOR=${{github.actor}} -a REF=${{github.ref}} -a JOB_ID=${{github.job}} --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
          cosign attest --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") --predicate sbom.json  ${{ env.DIGEST }}
