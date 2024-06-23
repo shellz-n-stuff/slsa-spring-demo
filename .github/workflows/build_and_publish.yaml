@@ -54,21 +54,30 @@ jobs:
     - name: Push Docker Image to GHCR
       run: |
         docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-        docker tag ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ${{ env.IMAGE_NAME }}:latest
-        docker push ${{ env.IMAGE_NAME }}:latest
     
     - name: Get Image Digest
       id: image-digest
       run: |
         DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }})
         echo "DIGEST=${DIGEST}" >> $GITHUB_ENV
-
-    - name: Sign Docker Image with Cosign
+    
+    # SBOM generation and signing
+    - name: Generate SBOM
+      run: syft ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -o json > sbom.json
+    
+    - name: Sign SBOM with Cosign
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
-         cosign sign --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+        cosign sign-blob --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") sbom.json > sbom.json.sig
 
+    - name: Attach SBOM to Docker Image
+      env:
+        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      run: |
+        cosign attach sbom --sbom sbom.json --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+
+    # Scan Image then Sign if Okay
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.23.0
       with:
@@ -81,9 +90,12 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'
-
-    - name: Generate SBOM
-      run: syft ghcr.io/shellz-n-stuff/slsa-spring-demo:${{ env.COMMIT_SHA }} -o json > sbom.json
+      
+    - name: Sign Docker Image with Cosign
+      env:
+        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      run: |
+         cosign sign --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
