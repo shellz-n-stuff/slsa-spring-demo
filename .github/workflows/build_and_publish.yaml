@@ -64,7 +64,7 @@ jobs:
 
     # SBOM generation and scanning
     - name: Generate SBOM
-      run: syft ${{ env.IMAGE_NAME }}::${{ env.IMAGE_TAG }} -o json > sbom.json
+      run: syft ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -o json > sbom.json
 
     - name: Scan SBOM with Grype
       run: grype sbom:sbom.json --output sarif > grype-report.sarif
