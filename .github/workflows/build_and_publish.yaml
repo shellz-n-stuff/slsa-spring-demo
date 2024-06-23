@@ -64,18 +64,15 @@ jobs:
     # SBOM generation and signing
     - name: Generate SBOM
       run: syft ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -o json > sbom.json
-    
-    - name: Sign SBOM with Cosign
-      env:
-        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: |
-        cosign sign-blob --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") sbom.json > sbom.json.sig
 
-    - name: Attach SBOM to Docker Image
+    - name: Attach SBOM to Docker Image and Submit a signature for the SBOM
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
-        cosign attach sbom --sbom sbom.json --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${{ env.DIGEST }}
+        ATTACHED_SSBOM=$(cosign attach sbom --sbom sbom.json ${{ env.DIGEST }})
+        echo "${ATTACHED_SSBOM}"
+        cosign sign --yes --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ${ATTACHED_SSBOM}
+
 
     # Scan Image then Sign if Okay
     - name: Run Trivy vulnerability scanner
