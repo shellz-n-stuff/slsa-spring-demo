@@ -51,8 +51,8 @@ jobs:
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: |
-        cosign sign --key <(echo "${{ secrets.COSIGN_KEY }}") ghcr.io/${{ github.repository }}:latest
-        cosign sign --key <(echo "${{ secrets.COSIGN_KEY }}") ghcr.io/${{ github.repository }}:${{ env.COMMIT_SHA }}
+        cosign sign --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ghcr.io/${{ github.repository }}:latest
+        cosign sign --key <(echo "${{ secrets.COSIGN_PRIVATE_KEY }}") ghcr.io/${{ github.repository }}:${{ env.COMMIT_SHA }}
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.23.0
