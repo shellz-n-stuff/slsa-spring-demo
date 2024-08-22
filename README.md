@@ -1,7 +1,7 @@
 # Description
 This application is an example of how you can approach leveraging secure base images and Github Actions to improve the supply chain security of an application.
 
-This exemplar application is based on Google's JIB examples:
+The exemplar application is based on Google's JIB examples:
 - https://github.com/GoogleContainerTools/jib/tree/master/examples/spring-boot
 
 # Dockerize a Spring Boot application using Jib
